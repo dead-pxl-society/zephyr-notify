@@ -47,6 +47,7 @@ impl ServerInfo {
             images: self.has("body-images") || self.has("icon-static"),
             sound: self.has("sound"),
             persistent: true,
+            secondary_actions: self.has("actions"),
         }
     }
 }

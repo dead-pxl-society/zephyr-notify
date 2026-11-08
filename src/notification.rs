@@ -155,6 +155,8 @@ pub struct Action {
     /// Bring the app to the front when pressed (macOS, Windows). Without this, a press
     /// is handled without stealing focus.
     pub foreground: bool,
+    /// Nice to have, but not worth hiding the other actions for. See [`Action::secondary`].
+    pub secondary: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -177,6 +179,7 @@ impl Action {
             kind: ActionKind::Button,
             destructive: false,
             foreground: false,
+            secondary: false,
         }
     }
 
@@ -218,6 +221,33 @@ impl Action {
     pub fn foreground(mut self) -> Self {
         self.foreground = true;
         self
+    }
+
+    /// Marks this action as one the user can also take elsewhere, such as Reject when the
+    /// request can be declined in the app.
+    ///
+    /// macOS puts the actions of a notification with more than one behind an "Options"
+    /// menu, so there a secondary action is left out to keep the others on the
+    /// notification itself. Every other platform shows it. Check
+    /// [`Capabilities::secondary_actions`] to find out which happens.
+    ///
+    /// If every action is secondary, all of them are kept.
+    #[must_use]
+    pub fn secondary(mut self) -> Self {
+        self.secondary = true;
+        self
+    }
+}
+
+/// The actions to put on a notification for a platform that hides actions behind a menu
+/// once there's more than one.
+#[cfg_attr(not(any(target_os = "macos", test)), allow(dead_code))]
+pub(crate) fn without_secondary(actions: &[Action]) -> Vec<Action> {
+    let primary: Vec<Action> = actions.iter().filter(|a| !a.secondary).cloned().collect();
+    if primary.is_empty() {
+        actions.to_vec()
+    } else {
+        primary
     }
 }
 
@@ -384,6 +414,9 @@ pub struct Capabilities {
     /// The OS can be asked to keep a notification on screen. On macOS this is always
     /// false because the user's alert style decides.
     pub persistent: bool,
+    /// [Secondary](Action::secondary) actions are shown. False on macOS, where they're left
+    /// out.
+    pub secondary_actions: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -438,6 +471,37 @@ mod tests {
                 .is_err()
         );
         assert!(Notification::new("t").id("").validate().is_err());
+    }
+
+    #[test]
+    fn secondary_actions_are_dropped_only_alongside_primary_ones() {
+        let ids = |actions: Vec<Action>| -> Vec<String> {
+            without_secondary(&actions)
+                .into_iter()
+                .map(|a| a.id)
+                .collect()
+        };
+        assert_eq!(
+            ids(vec![
+                Action::button("accept", "Accept"),
+                Action::button("reject", "Reject").secondary(),
+                Action::text_input("reply", "Reply").secondary(),
+            ]),
+            ["accept"]
+        );
+        assert_eq!(
+            ids(vec![
+                Action::button("a", "A").secondary(),
+                Action::button("b", "B").secondary(),
+            ]),
+            ["a", "b"],
+            "with nothing primary, everything stays"
+        );
+        assert_eq!(
+            ids(vec![Action::button("a", "A"), Action::button("b", "B")]),
+            ["a", "b"]
+        );
+        assert!(ids(vec![]).is_empty());
     }
 
     #[test]

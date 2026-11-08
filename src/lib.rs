@@ -19,7 +19,7 @@
 //!         .id("transfer-42")
 //!         .body("holiday.mov (1.2 GB)")
 //!         .action(Action::button("accept", "Accept"))
-//!         .action(Action::button("reject", "Reject").destructive())
+//!         .action(Action::button("reject", "Reject").destructive().secondary())
 //!         .persistent(true),
 //! )?;
 //!

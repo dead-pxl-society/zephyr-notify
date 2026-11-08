@@ -20,7 +20,7 @@ let transfer = notifier.show(
         .id("transfer-42")
         .body("holiday.mov (1.2 GB)")
         .action(Action::button("accept", "Accept"))
-        .action(Action::button("reject", "Reject").destructive())
+        .action(Action::button("reject", "Reject").destructive().secondary())
         .persistent(true),
 )?;
 
@@ -37,7 +37,8 @@ transfer.set_progress(Progress::fraction(0.25).label("12 MB/s"))?; // Fine in a 
 
 | Feature | macOS | Windows | Linux |
 | --- | --- | --- | --- |
-| Action buttons | Yes | Yes | Yes, if the server has the `actions` capability |
+| Action buttons | Yes; more than one goes in an "Options" menu | Yes | Yes, if the server has the `actions` capability |
+| Secondary actions | Left out | Shown | Shown |
 | Inline text reply | Yes | Yes | Yes, if the server has `inline-reply`; otherwise a plain button |
 | Progress | Text in the body | Native bar | `value` hint, and text on servers not known to draw it |
 | Quiet updates | Passive replacement | In-place data binding | Replace with sound suppressed |
@@ -50,6 +51,7 @@ transfer.set_progress(Progress::fraction(0.25).label("12 MB/s"))?; // Fine in a 
 ## Features
 
 - Accept/reject style buttons, destructive styling, and optional focus on press
+- Secondary actions, so the main action isn't buried in a menu on macOS
 - Text input on a notification
 - Determinate and indeterminate progress, with status and label text, rate limited for you
 - Quiet updates that don't re-alert, and don't resurrect a notification the user dismissed
@@ -105,6 +107,9 @@ fn main() {
   `Error::NotBundled`, which includes `cargo run` and `tauri dev`. Test with a real bundle,
   such as `tauri build --debug`, or see `scripts/macos-demo.sh`.
   An ad-hoc signature isn't enough: macOS reports permission denied without prompting.
+- **More than one action goes behind an "Options" menu.** Mark the actions users can also
+  take in your app with `Action::secondary()`, and they're left out here so the rest stay
+  on the notification.
 - **Buttons are hidden by default.** With the default banner style they appear on hover,
   and the banner goes away after a few seconds. Users can choose the Alerts style in System
   Settings, and only that keeps a notification on screen until it's answered.

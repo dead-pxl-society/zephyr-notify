@@ -29,7 +29,7 @@ use objc2_user_notifications::{
 use crate::error::{Error, Result};
 use crate::notification::{
     Action, ActionKind, Capabilities, DismissReason, Event, Notification, Permission,
-    ProgressSupport, Sound, Urgency, stable_hash,
+    ProgressSupport, Sound, Urgency, stable_hash, without_secondary,
 };
 use crate::notifier::{AppConfig, BackendApi, EventSink, Present, lock};
 
@@ -162,7 +162,7 @@ impl BackendApi for MacBackend {
         if self.permission()? != Permission::Granted {
             return Err(Error::PermissionDenied);
         }
-        let category = self.ensure_category(notification)?;
+        let category = self.ensure_category(&without_secondary(&notification.actions))?;
         let content = build_content(notification, present, &category);
         let id = NSString::from_str(&notification.id);
         // A nil trigger means deliver now.
@@ -208,6 +208,7 @@ impl BackendApi for MacBackend {
             images: true,
             sound: true,
             persistent: false,
+            secondary_actions: false,
         }
     }
 
@@ -258,8 +259,8 @@ impl BackendApi for MacBackend {
 impl MacBackend {
     /// Registers the category holding this notification's buttons and returns its id.
     /// Every category asks for dismiss callbacks, including the one with no buttons.
-    fn ensure_category(&self, notification: &Notification) -> Result<String> {
-        let id = category_id(&notification.actions);
+    fn ensure_category(&self, actions: &[Action]) -> Result<String> {
+        let id = category_id(actions);
         let mut known = lock(&self.categories);
         if known.contains(&id) {
             return Ok(id);
@@ -270,7 +271,7 @@ impl MacBackend {
         let mut categories: Vec<_> = fetch_categories()?.into_iter().map(|c| c.0).collect();
         let already_set = categories.iter().any(|c| c.identifier().to_string() == id);
         if !already_set {
-            categories.push(build_category(&id, &notification.actions));
+            categories.push(build_category(&id, actions));
             center().setNotificationCategories(&NSSet::from_retained_slice(&categories));
             if !wait_for_category(&id)? {
                 // Still post it, since a notification missing its buttons beats none. It

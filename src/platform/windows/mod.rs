@@ -156,6 +156,7 @@ impl BackendApi for WindowsBackend {
             images: true,
             sound: true,
             persistent: true,
+            secondary_actions: true,
         }
     }
 

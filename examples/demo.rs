@@ -27,8 +27,13 @@ fn main() -> zephyr_notify::Result<()> {
         .id("demo-transfer")
         .body("holiday.mov (1.2 GB)")
         .action(Action::button("accept", "Accept"))
-        .action(Action::button("reject", "Reject").destructive())
-        .action(Action::text_input("reply", "Reply").placeholder("Say something"))
+        // Secondary, so on macOS Accept shows as a button instead of inside a menu.
+        .action(Action::button("reject", "Reject").destructive().secondary())
+        .action(
+            Action::text_input("reply", "Reply")
+                .placeholder("Say something")
+                .secondary(),
+        )
         .persistent(true);
 
     if std::env::args().any(|arg| arg == "--probe") {
